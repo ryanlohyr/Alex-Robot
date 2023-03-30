@@ -266,10 +266,7 @@ void leftISR()
       leftForwardTicksTurns ++;
       break;
   }
-//    // leftTicks++;
-// CANNOT USE THIS
-//  dbprintf("Left forward ticks: %i \n", leftForwardTicks);
-//  dbprintf("Left reverse ticks: %i \n", leftReverseTicks);
+
 }
 
 void rightISR()
@@ -717,6 +714,9 @@ void loop() {
       
       }
     } else if (dir == BACKWARD){
+      dbprintf("reverse ticks is %ld", leftReverseTicks);
+      dbprintf("rverse dist is %ld", reverseDist);
+      dbprintf("new dist is %ld", newDist);
        if (reverseDist > newDist){
         deltaDist = 0;
         newDist = 0;
