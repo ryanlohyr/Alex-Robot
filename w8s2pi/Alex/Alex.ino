@@ -41,6 +41,10 @@ volatile TDirection dir = STOP;
 #define ALEX_LENGTH 16
 #define ALEX_BREADTH 6
 
+//change amt for movement configuration
+#define LeftF 20
+#define RightF 0
+
 float alexDiagonal = 0.0;
 float alexCirc = 0.0;
 /*
@@ -386,9 +390,11 @@ int pwmVal(float speed)
 // Specifying a distance of 0 means Alex will
 // continue moving forward indefinitely.
 
-void forward(float dist, float speed)
+void forward(int dist, int speed)
 {
 //  //Activity 4 w8s2
+  dbprintf("Dist: %i \n", dist);
+  dbprintf("Speed: %i \n", speed);
   if(dist > 0) {
     deltaDist = dist;
   } else {
@@ -397,8 +403,7 @@ void forward(float dist, float speed)
   newDist = forwardDist + deltaDist;
   dir = FORWARD;
   dbprintf("f ok\n");
-  int val = pwmVal(speed);
-
+  int val = pwmVal((float)speed);
   // For now we will ignore dist and move
   // forward indefinitely. We will fix this
   // in Week 9.
@@ -407,8 +412,8 @@ void forward(float dist, float speed)
   // RF = Right forward pin, RR = Right reverse pin
   // This will be replaced later with bare-metal code.
   
-  analogWrite(LF, val);
-  analogWrite(RF, val);
+  analogWrite(LF, (val+ LeftF));
+  analogWrite(RF, (val + RightF));
   analogWrite(LR,0);
   analogWrite(RR, 0);
 }
@@ -418,8 +423,10 @@ void forward(float dist, float speed)
 // reverse at half speed.
 // Specifying a distance of 0 means Alex will
 // continue reversing indefinitely.
-void reverse(float dist, float speed)
+void reverse(int dist, int speed)
 {
+  dbprintf("Dist: %i \n", dist);
+  dbprintf("Speed: %i \n", speed);
   //  //Activity 4 w8s2
   if(dist > 0) {
     deltaDist = dist;
@@ -428,8 +435,11 @@ void reverse(float dist, float speed)
   }
   newDist = forwardDist + deltaDist;
   dir = BACKWARD;
+  dbprintf("fowardDist: %i \n", forwardDist);
+  dbprintf("deltaDist: %i \n", deltaDist);
+  dbprintf("Newdist: %i \n", newDist);
 
-  int val = pwmVal(speed);
+  int val = pwmVal((float)speed);
 
   // For now we will ignore dist and 
   // reverse indefinitely. We will fix this
@@ -452,7 +462,6 @@ void reverse(float dist, float speed)
 unsigned long computeDeltaTicks(float ang)
 {
   unsigned long ticks = (unsigned long) ((ang * alexCirc * COUNTS_PER_REV) / (360.0 * WHEEL_CIRC));
-
   return ticks;
 }
 
@@ -461,11 +470,13 @@ void left(float ang, float speed)
   dir = LEFT;
   
   int val = pwmVal(speed);
-
+  dbprintf("ang: %i \n", ang);
+  dbprintf("speed: %i \n", speed);
+  dbprintf("delta: %i", deltaTicks);
   if(ang == 0){
     deltaTicks = 9999999;
   } else {
-    deltaTicks = computeDeltaTicks(ang);
+    deltaTicks = computeDeltaTicks((float)ang);
   }
 
   targetTicks = leftReverseTicksTurns + deltaTicks;
@@ -485,16 +496,19 @@ void left(float ang, float speed)
 // turn left at half speed.
 // Specifying an angle of 0 degrees will cause Alex to
 // turn right indefinitely.
-void right(float ang, float speed)
+void right(int ang, int speed)
 {
   dir = RIGHT;
+  dbprintf("Ang: %i \n", ang);
+  dbprintf("Speed: %i \n", speed);
+  
   
   int val = pwmVal(speed);
 
   if(ang == 0){
     deltaTicks = 9999999;
   } else {
-    deltaTicks = computeDeltaTicks(ang);
+    deltaTicks = computeDeltaTicks((float)ang);
   }
 
   targetTicks = leftReverseTicksTurns + deltaTicks;
@@ -560,25 +574,25 @@ void handleCommand(TPacket *command)
     // For movement commands, param[0] = distance, param[1] = speed.
     case COMMAND_FORWARD:
         sendOK();
-        forward((float) command->params[0], (float) command->params[1]);
+        forward((int) command->params[0], (int) command->params[1]);
       break;
       
     // For movement commands, param[0] = distance, param[1] = speed.
     case COMMAND_REVERSE:
         sendOK();
-        reverse((float) command->params[0], (float) command->params[1]);
+        reverse((int) command->params[0], (int) command->params[1]);
       break;
 
     // For movement commands, param[0] = distance, param[1] = speed.
     case COMMAND_TURN_LEFT:
         sendOK();
-        left((float) command->params[0], (float) command->params[1]);
+        left((int) command->params[0], (int) command->params[1]);
       break;
 
     // For movement commands, param[0] = distance, param[1] = speed.
     case COMMAND_TURN_RIGHT:
         sendOK();
-        right((float) command->params[0], (float) command->params[1]);
+        right((int) command->params[0], (int) command->params[1]);
       break;
 
     // For movement commands, param[0] = distance, param[1] = speed.
@@ -714,9 +728,6 @@ void loop() {
       
       }
     } else if (dir == BACKWARD){
-      dbprintf("reverse ticks is %ld", leftReverseTicks);
-      dbprintf("rverse dist is %ld", reverseDist);
-      dbprintf("new dist is %ld", newDist);
        if (reverseDist > newDist){
         deltaDist = 0;
         newDist = 0;
