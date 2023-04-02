@@ -180,6 +180,12 @@ void sendCommand(char command)
 
 	switch(command)
 	{
+		case 'i':
+		case 'I':
+			commandPacket.command = COMMAND_IDENTIFY_COLOUR;
+			commandPacket.params[0] = 0;
+			sendPacket(&commandPacket);
+			break;
 		case 'f':
 		case 'F':
 			getParams(&commandPacket);
@@ -262,7 +268,7 @@ int main()
 	while(!exitFlag)
 	{
 		char ch;
-		printf("Command (f=forward, b=reverse, l=turn left, r=turn right, s=stop, c=clear stats, g=get stats q=exit)\n");
+		printf("Command (f=forward, b=reverse, l=turn left, r=turn right, s=stop, c=clear stats, i=identify object, g=get stats q=exit)\n");
 		scanf("%c", &ch);
 
 		// Purge extraneous characters from input stream

@@ -78,6 +78,20 @@ unsigned long deltaDist;
 unsigned long newDist;
 unsigned long deltaTicks;
 unsigned long targetTicks;
+
+//colour sensor variables 
+#define S0 7
+#define S1 8
+#define S2 9
+#define S3 12 
+#define OUT 13
+
+#define LedRed    A2
+#define LedGreen  A0
+#define LedBlue   A1
+
+int R,G,B     = 0;
+
 /*
  * 
  * Alex Communication Routines.
@@ -134,6 +148,89 @@ void sendResponse(TPacket *packet)
 
  len = serialize(buffer, packet, sizeof(TPacket));
  writeSerial(buffer, len);
+}
+int determine_hue(int R, int G, int B){
+  double red = (double)R/255;
+  double green = (double)G/255;
+  double blue = (double)B/255;
+  double newArray[3] = {red,green,blue};
+  for(long i = 0; i <2;i++){
+    long flag = 0;
+    for(long j = 0 ; j < 3 - (i + 1); j++){
+      if (newArray[j+1] < newArray[j]){
+          double temp = newArray[j + 1];
+          newArray[j + 1] = newArray[j];
+          newArray[j] = temp;
+          flag += 1;
+     }
+      }
+    if(flag == 0){
+      break;
+    }
+  }
+  
+  double hue = 0;
+  if(newArray[2] == red){
+    hue = (green - blue)/(newArray[2] - newArray[0]);
+  }else if(newArray[2] == green){
+    hue = 2.0 + (blue - red)/(newArray[2] - newArray[0]);
+  }else{
+    hue = 4.0 + (red - green)/(newArray[2] - newArray[0]);
+  }
+  if(hue < 0){
+     hue = hue * 60;
+      return hue + 360;
+  }
+  return hue * 60;
+}
+
+void sendColourStatus(){
+  // Setting red filtered photodiodes to be read Red frequency
+  digitalWrite(S2,LOW);
+  digitalWrite(S3,LOW);
+  R = pulseIn(OUT, LOW);  // Reading the output Red frequency
+  delay(100); 
+  // Setting Green filtered photodiodes to be read Green frequency
+  digitalWrite(S2,HIGH);
+  digitalWrite(S3,HIGH);
+  G = pulseIn(OUT, LOW);  // Reading the output Green frequency
+  delay(100);
+  // Setting Blue filtered photodiodes to be read Blue frequency
+  digitalWrite(S2,LOW);
+  digitalWrite(S3,HIGH);
+  B = pulseIn(OUT, LOW);  // Reading the output Blue frequency
+  delay(100);
+  
+  //----------------------------------------------------------Detect colors based on sensor values
+  if (R>20 && R<35 && G>80 && G<105 && B>70 && B<90){       // to detect red
+    digitalWrite(LedRed, HIGH);
+  }
+  else if (R>75 && R<100 && G>60 && G<85 && B>75 && B<95){  // to detect green
+    digitalWrite(LedGreen, HIGH);
+  }
+  else if (R>95 && R<115 && G>70 && G<95 && B>30 && B<55){  // to detect blue
+    digitalWrite(LedBlue, HIGH);
+  }
+  else{
+    digitalWrite(LedRed, LOW);
+    digitalWrite(LedGreen, LOW);
+    digitalWrite(LedBlue, LOW);
+  }
+  dbprintf("R= %i",R);
+  dbprintf(" | ");
+  dbprintf("G= %i",G);
+  dbprintf(" | ");
+  dbprintf("B= %i \n",B);
+  delay(200);
+  dbprintf("The colour is ");
+  int hue = determine_hue(R,G,B);
+  if(hue < 50){
+    dbprintf("red");
+  }else if(80<hue<140){
+    dbprintf("green");
+  }else{
+    dbprintf("neither green or red. \n");
+  }
 }
 
 void sendStatus()
@@ -560,10 +657,34 @@ void clearOneCounter(int which)
 {
   clearCounters();
 }
+void initialiseColourSensor(){
+  pinMode(S0, OUTPUT);
+  pinMode(S1, OUTPUT);
+  pinMode(S2, OUTPUT);
+  pinMode(S3, OUTPUT);
+  pinMode(OUT, INPUT);
+
+  pinMode(LedRed, OUTPUT);
+  pinMode(LedGreen, OUTPUT);
+  pinMode(LedBlue, OUTPUT);
+  
+  // Setting frequency-scaling to 20%
+  digitalWrite(S0,HIGH);
+  digitalWrite(S1,LOW);
+
+  for (int i=0; i<=5; i++){
+    digitalWrite(LedRed, !digitalRead(LedRed));
+    digitalWrite(LedGreen, !digitalRead(LedGreen));
+    digitalWrite(LedBlue, !digitalRead(LedBlue));
+    delay(250);
+  }
+}
+
 // Intialize Vincet's internal states
 
 void initializeState()
 {
+  initialiseColourSensor();
   clearCounters();
 }
 
@@ -605,7 +726,10 @@ void handleCommand(TPacket *command)
     case COMMAND_GET_STATS:
         sendStatus();
       break;
-    
+    case COMMAND_IDENTIFY_COLOUR:
+        sendOK();
+        sendColourStatus();
+        break;
     case COMMAND_CLEAR_STATS:
         clearOneCounter(command->params[0]);
         sendOK();
