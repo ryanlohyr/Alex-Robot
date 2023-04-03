@@ -10,9 +10,14 @@
 
 #define PORT_NAME			"/dev/ttyACM0"
 #define BAUD_RATE			B9600
+// #define CLEAR 				'c'
+#define W 1 70;
+#define S 1 70;
+#define A 1 70;
+#define D 1 70;
 
 int exitFlag=0;
-sem_t _xmitSema;
+
 
 void handleError(TResult error)
 {
@@ -275,6 +280,7 @@ int main()
 		flushInput();
 
 		sendCommand(ch);
+		// sendCommand(CLEAR);
 	}
 
 	printf("Closing connection to Arduino.\n");
