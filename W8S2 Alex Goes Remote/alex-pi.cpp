@@ -11,10 +11,16 @@
 #define PORT_NAME			"/dev/ttyACM0"
 #define BAUD_RATE			B9600
 // #define CLEAR 				'c'
-#define W 1 70;
-#define S 1 70;
-#define A 1 70;
-#define D 1 70;
+
+
+//variables for WASD functionality
+#define DEFAULT_ANGLE 45
+#define DEFAULT_DISTANCE 8
+#define DEFAULT_POWER 70
+#define TYPE_ANGLE 1
+#define TYPE_DISTANCE 0
+
+
 
 int exitFlag=0;
 
@@ -177,6 +183,16 @@ void getParams(TPacket *commandPacket)
 	flushInput();
 }
 
+//type set as 0 for distance and type set as 1 for angles
+void setWASDParams(TPacket *commandPacket,int type,int multiplier){ 
+	if(type == TYPE_DISTANCE){
+		commandPacket->params[0] = (DEFAULT_DISTANCE * multiplier);
+	}else{
+		commandPacket->params[0] = (DEFAULT_ANGLE * multiplier);
+	}
+	commandPacket->params[1] = DEFAULT_POWER;
+}
+
 void sendCommand(char command)
 {
 	TPacket commandPacket;
@@ -185,6 +201,46 @@ void sendCommand(char command)
 
 	switch(command)
 	{
+		case 'w':
+			setWASDParams(&commandPacket,TYPE_DISTANCE,1);
+			commandPacket.command = COMMAND_FORWARD;
+			sendPacket(&commandPacket);
+			break;
+		case 'W': //or we can have capital letters be any distance/angle input by user(?)
+			setWASDParams(&commandPacket,TYPE_DISTANCE,2);
+			commandPacket.command = COMMAND_FORWARD;
+			sendPacket(&commandPacket);
+			break;
+		case 'a':
+			setWASDParams(&commandPacket,TYPE_ANGLE,1);
+			commandPacket.command = COMMAND_TURN_LEFT;
+			sendPacket(&commandPacket);
+			break;
+		case 'A':
+			setWASDParams(&commandPacket,TYPE_ANGLE,2);
+			commandPacket.command = COMMAND_TURN_LEFT;
+			sendPacket(&commandPacket);
+			break;
+		case 's':
+			setWASDParams(&commandPacket,TYPE_ANGLE,1);
+			commandPacket.command = COMMAND_TURN_RIGHT;
+			sendPacket(&commandPacket);
+			break;
+		case 'S':
+			setWASDParams(&commandPacket,TYPE_ANGLE,2);
+			commandPacket.command = COMMAND_TURN_RIGHT;
+			sendPacket(&commandPacket);
+			break;
+		case 'd':
+			setWASDParams(&commandPacket,TYPE_DISTANCE,1);
+			commandPacket.command = COMMAND_REVERSE;
+			sendPacket(&commandPacket);
+			break;
+		case 'D':
+			setWASDParams(&commandPacket,TYPE_DISTANCE,2);
+			commandPacket.command = COMMAND_REVERSE;
+			sendPacket(&commandPacket);
+			break;
 		case 'i':
 		case 'I':
 			commandPacket.command = COMMAND_IDENTIFY_COLOUR;
@@ -219,8 +275,8 @@ void sendCommand(char command)
 			sendPacket(&commandPacket);
 			break;
 
-		case 's':
-		case 'S':
+		case 'x':
+		case 'X':
 			commandPacket.command = COMMAND_STOP;
 			sendPacket(&commandPacket);
 			break;
@@ -273,14 +329,14 @@ int main()
 	while(!exitFlag)
 	{
 		char ch;
-		printf("Command (f=forward, b=reverse, l=turn left, r=turn right, s=stop, c=clear stats, i=identify object, g=get stats q=exit)\n");
+		printf("Command (w,a,s,d,f=forward, b=reverse, l=turn left, r=turn right, x=stop, c=clear stats, i=identify object, g=get stats q=exit)\n");
 		scanf("%c", &ch);
 
 		// Purge extraneous characters from input stream
 		flushInput();
 
 		sendCommand(ch);
-		// sendCommand(CLEAR);
+		// sendCommand(CLEAR); //doing this method causing magic error
 	}
 
 	printf("Closing connection to Arduino.\n");

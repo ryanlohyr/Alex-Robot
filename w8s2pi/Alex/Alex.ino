@@ -577,7 +577,7 @@ void left(float ang, float speed)
     deltaTicks = computeDeltaTicks((float)ang);
   }
 
-  targetTicks = leftReverseTicksTurns + deltaTicks;
+  targetTicks = rightReverseTicksTurns + deltaTicks;
 
   // For now we will ignore ang. We will fix this in Week 9.
   // We will also replace this code with bare-metal later.
@@ -630,6 +630,7 @@ void stop()
   analogWrite(LR, 0);
   analogWrite(RF, 0);
   analogWrite(RR, 0);
+  clearCounters();
 }
 
 /*
