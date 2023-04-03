@@ -42,8 +42,7 @@ volatile TDirection dir = STOP;
 #define ALEX_BREADTH 6
 
 //change amt for movement configuration
-#define LeftF 20
-#define RightF 0
+// #define left 20;
 
 float alexDiagonal = 0.0;
 float alexCirc = 0.0;
@@ -202,20 +201,21 @@ void sendColourStatus(){
   delay(100);
   
   //----------------------------------------------------------Detect colors based on sensor values
-  if (R>20 && R<35 && G>80 && G<105 && B>70 && B<90){       // to detect red
-    digitalWrite(LedRed, HIGH);
-  }
-  else if (R>75 && R<100 && G>60 && G<85 && B>75 && B<95){  // to detect green
-    digitalWrite(LedGreen, HIGH);
-  }
-  else if (R>95 && R<115 && G>70 && G<95 && B>30 && B<55){  // to detect blue
-    digitalWrite(LedBlue, HIGH);
-  }
-  else{
-    digitalWrite(LedRed, LOW);
-    digitalWrite(LedGreen, LOW);
-    digitalWrite(LedBlue, LOW);
-  }
+
+  // if (R>20 && R<35 && G>80 && G<105 && B>70 && B<90){       // to detect red
+  //   digitalWrite(LedRed, HIGH);
+  // }
+  // else if (R>75 && R<100 && G>60 && G<85 && B>75 && B<95){  // to detect green
+  //   digitalWrite(LedGreen, HIGH);
+  // }
+  // else if (R>95 && R<115 && G>70 && G<95 && B>30 && B<55){  // to detect blue
+  //   digitalWrite(LedBlue, HIGH);
+  // }
+  // else{
+  //   digitalWrite(LedRed, LOW);
+  //   digitalWrite(LedGreen, LOW);
+  //   digitalWrite(LedBlue, LOW);
+  // }
   dbprintf("R= %i",R);
   dbprintf(" | ");
   dbprintf("G= %i",G);
@@ -231,6 +231,7 @@ void sendColourStatus(){
   }else{
     dbprintf("neither green or red. \n");
   }
+  dbprintf("The Hue is %i", hue);
 }
 
 void sendStatus()
@@ -509,8 +510,8 @@ void forward(int dist, int speed)
   // RF = Right forward pin, RR = Right reverse pin
   // This will be replaced later with bare-metal code.
   
-  analogWrite(LF, (val+ LeftF));
-  analogWrite(RF, (val + RightF));
+  analogWrite(LF, (val));
+  analogWrite(RF, (val));
   analogWrite(LR,0);
   analogWrite(RR, 0);
 }
@@ -582,8 +583,8 @@ void left(float ang, float speed)
   // We will also replace this code with bare-metal later.
   // To turn left we reverse the left wheel and move
   // the right wheel forward.
-  analogWrite(LR, val);
-  analogWrite(RF, val);
+  analogWrite(LR, (val));
+  analogWrite(RF, (val));
   analogWrite(LF, 0);
   analogWrite(RR, 0);
 }
@@ -646,6 +647,7 @@ void clearCounters()
   leftForwardTicksTurns = 0;
   leftReverseTicksTurns = 0;
   rightForwardTicksTurns = 0;
+  rightReverseTicksTurns = 0;
   leftRevs=0;
   rightRevs=0;
   forwardDist=0;
