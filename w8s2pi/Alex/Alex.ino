@@ -84,12 +84,20 @@ unsigned long targetTicks;
 #define S2 9
 #define S3 12 
 #define OUT 13
+#define UPPERR 205
+#define LOWERR 170
+#define UPPERG 212
+#define LOWERG 110
+#define UPPERB
+#define LOWERB
 
-#define LedRed    A2
-#define LedGreen  A0
-#define LedBlue   A1
+unsigned long R,G,B = 0;
 
-int R,G,B     = 0;
+
+//#define LedRed    A2
+//#define LedGreen  A0
+//#define LedBlue   A1
+
 
 /*
  * 
@@ -148,90 +156,31 @@ void sendResponse(TPacket *packet)
  len = serialize(buffer, packet, sizeof(TPacket));
  writeSerial(buffer, len);
 }
-int determine_hue(int R, int G, int B){
-  double red = (double)R/255;
-  double green = (double)G/255;
-  double blue = (double)B/255;
-  double newArray[3] = {red,green,blue};
-  for(long i = 0; i <2;i++){
-    long flag = 0;
-    for(long j = 0 ; j < 3 - (i + 1); j++){
-      if (newArray[j+1] < newArray[j]){
-          double temp = newArray[j + 1];
-          newArray[j + 1] = newArray[j];
-          newArray[j] = temp;
-          flag += 1;
-     }
-      }
-    if(flag == 0){
-      break;
-    }
-  }
-  
-  double hue = 0;
-  if(newArray[2] == red){
-    hue = (green - blue)/(newArray[2] - newArray[0]);
-  }else if(newArray[2] == green){
-    hue = 2.0 + (blue - red)/(newArray[2] - newArray[0]);
-  }else{
-    hue = 4.0 + (red - green)/(newArray[2] - newArray[0]);
-  }
-  if(hue < 0){
-     hue = hue * 60;
-      return hue + 360;
-  }
-  return hue * 60;
-}
 
 void sendColourStatus(){
-  // Setting red filtered photodiodes to be read Red frequency
+  // Read Red freqency
   digitalWrite(S2,LOW);
   digitalWrite(S3,LOW);
-  R = pulseIn(OUT, LOW);  // Reading the output Red frequency
+  R = pulseIn(OUT, LOW);
   delay(100); 
-  // Setting Green filtered photodiodes to be read Green frequency
+  R = map(R, LOWERR, UPPERR, 255, 0);
+  
+  // Read Green freqency
   digitalWrite(S2,HIGH);
   digitalWrite(S3,HIGH);
   G = pulseIn(OUT, LOW);  // Reading the output Green frequency
   delay(100);
-  // Setting Blue filtered photodiodes to be read Blue frequency
-  digitalWrite(S2,LOW);
-  digitalWrite(S3,HIGH);
-  B = pulseIn(OUT, LOW);  // Reading the output Blue frequency
-  delay(100);
+  G = map(G, LOWERG, UPPERG, 255, 0);
   
-  //----------------------------------------------------------Detect colors based on sensor values
+  // Setting Blue frequency, delete later
+//  digitalWrite(S2,LOW);
+//  digitalWrite(S3,HIGH);
+//  B = pulseIn(OUT, LOW);  // Reading the output Blue frequency
+//  delay(100);
+//  //B = map(B, LOWERB, UPPERB, 255, 0);
 
-  // if (R>20 && R<35 && G>80 && G<105 && B>70 && B<90){       // to detect red
-  //   digitalWrite(LedRed, HIGH);
-  // }
-  // else if (R>75 && R<100 && G>60 && G<85 && B>75 && B<95){  // to detect green
-  //   digitalWrite(LedGreen, HIGH);
-  // }
-  // else if (R>95 && R<115 && G>70 && G<95 && B>30 && B<55){  // to detect blue
-  //   digitalWrite(LedBlue, HIGH);
-  // }
-  // else{
-  //   digitalWrite(LedRed, LOW);
-  //   digitalWrite(LedGreen, LOW);
-  //   digitalWrite(LedBlue, LOW);
-  // }
-  dbprintf("R= %i",R);
-  dbprintf(" | ");
-  dbprintf("G= %i",G);
-  dbprintf(" | ");
-  dbprintf("B= %i \n",B);
-  delay(200);
-  dbprintf("The colour is ");
-  int hue = determine_hue(R,G,B);
-  if(hue < 50){
-    dbprintf("red");
-  }else if(80<hue<140){
-    dbprintf("green");
-  }else{
-    dbprintf("neither green or red. \n");
-  }
-  dbprintf("The Hue is %i", hue);
+  dbprintf("R = %i", R);
+  dbprintf("G = %i", G);
 }
 
 void sendStatus()
@@ -243,8 +192,6 @@ void sendStatus()
   // packetType and command files accordingly, then use sendResponse
   // to send out the packet. See sendMessage on how to use sendResponse.
 
-  //Activity 3 w8s2
-  
    TPacket statusPacket;
    statusPacket.packetType = PACKET_TYPE_RESPONSE;
    statusPacket.command = RESP_STATUS;
@@ -258,7 +205,6 @@ void sendStatus()
    statusPacket.params[7] = rightReverseTicksTurns;
    statusPacket.params[8] = forwardDist;
    statusPacket.params[9] = reverseDist;
-   //statusPacket.params = {leftForwardTicks,rightForwardTicks,leftReverseTicks,rightReverseTicks,leftForwardTicksTurns,rightForwardTicksTurns,leftReverseTicksTurns,rightReverseTicksTurns,forwardDist,reverseDist};
    sendResponse(&statusPacket);
 }
 
@@ -286,7 +232,6 @@ void sendBadPacket()
 {
   // Tell the Pi that it sent us a packet with a bad
   // magic number.
-  
   TPacket badPacket;
   badPacket.packetType = PACKET_TYPE_ERROR;
   badPacket.command = RESP_BAD_PACKET;
@@ -298,7 +243,6 @@ void sendBadChecksum()
 {
   // Tell the Pi that it sent us a packet with a bad
   // checksum.
-  
   TPacket badChecksum;
   badChecksum.packetType = PACKET_TYPE_ERROR;
   badChecksum.command = RESP_BAD_CHECKSUM;
@@ -368,7 +312,6 @@ void leftISR()
       leftForwardTicksTurns ++;
       break;
   }
-
 }
 
 void rightISR()
@@ -387,26 +330,15 @@ void rightISR()
       rightReverseTicksTurns ++;
       break;
   }
-//  // rightTicks++;
-// cannot use this
-//  dbprintf("Right forward ticks: %i \n", rightForwardTicks);
-//  dbprintf("Right reverse ticks: %i \n", rightReverseTicks);
 }
 
 // Set up the external interrupt pins INT0 and INT1
 // for falling edge triggered. Use bare-metal.
 void setupEINT()
 {
-  // Use bare-metal to configure pins 2 and 3 to be
-  // falling edge triggered. Remember to enable
-  // the INT0 and INT1 interrupts.
   EICRA |= 0b1010;
   EIMSK |= 0b11;
 }
-
-// Implement the external interrupt ISRs below.
-// INT0 ISR should call leftISR while INT1 ISR
-// should call rightISR.
 
 ISR(INT0_vect)
 {
@@ -417,8 +349,6 @@ ISR(INT1_vect)
 {
   rightISR();
 }
-
-// Implement INT0 and INT1 ISRs above.
 
 /*
  * Setup and start codes for serial communications
@@ -502,14 +432,10 @@ void forward(int dist, int speed)
   dir = FORWARD;
   dbprintf("f ok\n");
   int val = pwmVal((float)speed);
-  // For now we will ignore dist and move
-  // forward indefinitely. We will fix this
-  // in Week 9.
 
   // LF = Left forward pin, LR = Left reverse pin
   // RF = Right forward pin, RR = Right reverse pin
-  // This will be replaced later with bare-metal code.
-  
+  // This will be replaced later with bare-metal code. 
   analogWrite(LF, (val));
   analogWrite(RF, (val));
   analogWrite(LR,0);
@@ -568,16 +494,17 @@ void left(float ang, float speed)
   dir = LEFT;
   
   int val = pwmVal(speed);
-  dbprintf("ang: %i \n", ang);
-  dbprintf("speed: %i \n", speed);
-  dbprintf("delta: %i", deltaTicks);
+  dbprintf("ang: %i \n", (int)ang);
+  dbprintf("speed: %i \n", (int)speed);
+  dbprintf("delta: %i", (int)deltaTicks);
   if(ang == 0){
     deltaTicks = 9999999;
   } else {
     deltaTicks = computeDeltaTicks((float)ang);
   }
 
-  targetTicks = rightReverseTicksTurns + deltaTicks;
+  targetTicks = leftReverseTicksTurns + deltaTicks;
+  dbprintf("Tticks = %ld\n", targetTicks);
 
   // For now we will ignore ang. We will fix this in Week 9.
   // We will also replace this code with bare-metal later.
@@ -609,7 +536,7 @@ void right(int ang, int speed)
     deltaTicks = computeDeltaTicks((float)ang);
   }
 
-  targetTicks = leftReverseTicksTurns + deltaTicks;
+  targetTicks = leftForwardTicksTurns + deltaTicks;
 
   // For now we will ignore ang. We will fix this in Week 9.
   // We will also replace this code with bare-metal later.
@@ -633,11 +560,6 @@ void stop()
   clearCounters();
 }
 
-/*
- * Alex's setup and run codes
- * 
- */
-
 // Clears all our counters
 void clearCounters()
 {
@@ -660,35 +582,22 @@ void clearOneCounter(int which)
 {
   clearCounters();
 }
-void initialiseColourSensor(){
-  pinMode(S0, OUTPUT);
-  pinMode(S1, OUTPUT);
-  pinMode(S2, OUTPUT);
-  pinMode(S3, OUTPUT);
-  pinMode(OUT, INPUT);
 
-  pinMode(LedRed, OUTPUT);
-  pinMode(LedGreen, OUTPUT);
-  pinMode(LedBlue, OUTPUT);
-  
-  // Setting frequency-scaling to 20%
-  digitalWrite(S0,HIGH);
-  digitalWrite(S1,LOW);
-
-  for (int i=0; i<=5; i++){
-    digitalWrite(LedRed, !digitalRead(LedRed));
-    digitalWrite(LedGreen, !digitalRead(LedGreen));
-    digitalWrite(LedBlue, !digitalRead(LedBlue));
-    delay(250);
-  }
-}
-
-// Intialize Vincet's internal states
+// Intialize Alex's internal states
 
 void initializeState()
 {
-  initialiseColourSensor();
   clearCounters();
+}
+
+void setupColour(){
+  pinMode(S0, OUTPUT);
+  pinMode(S1,OUTPUT);
+  pinMode(S2,OUTPUT);
+  pinMode(S3,OUTPUT);
+  pinMode(OUT,INPUT);
+  digitalWrite(S0,HIGH);
+  digitalWrite(S1,LOW);
 }
 
 void handleCommand(TPacket *command)
@@ -699,24 +608,28 @@ void handleCommand(TPacket *command)
     case COMMAND_FORWARD:
         sendOK();
         forward((int) command->params[0], (int) command->params[1]);
+        clearCounters();
       break;
       
     // For movement commands, param[0] = distance, param[1] = speed.
     case COMMAND_REVERSE:
         sendOK();
         reverse((int) command->params[0], (int) command->params[1]);
+        clearCounters();
       break;
 
     // For movement commands, param[0] = distance, param[1] = speed.
     case COMMAND_TURN_LEFT:
         sendOK();
         left((int) command->params[0], (int) command->params[1]);
+        clearCounters();
       break;
 
     // For movement commands, param[0] = distance, param[1] = speed.
     case COMMAND_TURN_RIGHT:
         sendOK();
         right((int) command->params[0], (int) command->params[1]);
+        clearCounters();
       break;
 
     // For movement commands, param[0] = distance, param[1] = speed.
@@ -795,6 +708,7 @@ void setup() {
   startMotors();
   enablePullups();
   initializeState();
+  setupColour();
   sei();
 }
 
@@ -820,26 +734,15 @@ void handlePacket(TPacket *packet)
   }
 }
 
-void loop() {
-
-// Uncomment the code below for Step 2 of Activity 3 in Week 8 Studio 2
-
-//forward(0,70);
-
-// Uncomment the code below for Week 8 Studio 2
-
- // put your main code here, to run repeatedly:
- 
+void loop() { 
   TPacket recvPacket; // This holds commands from the Pi
-
-  TResult result = readPacket(&recvPacket);
-  
+  TResult result = readPacket(&recvPacket); 
   if(result == PACKET_OK)
     handlePacket(&recvPacket);
   else
     if(result == PACKET_BAD)
     {
-      sendBadPacket();
+      sendBadPacket;
     }
   else
     if(result == PACKET_CHECKSUM_BAD)
