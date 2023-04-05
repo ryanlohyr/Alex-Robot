@@ -222,23 +222,23 @@ void sendCommand(char command)
 			sendPacket(&commandPacket);
 			break;
 		case 's':
-			setWASDParams(&commandPacket,TYPE_ANGLE,1);
-			commandPacket.command = COMMAND_TURN_RIGHT;
-			sendPacket(&commandPacket);
-			break;
-		case 'S':
-			setWASDParams(&commandPacket,TYPE_ANGLE,2);
-			commandPacket.command = COMMAND_TURN_RIGHT;
-			sendPacket(&commandPacket);
-			break;
-		case 'd':
 			setWASDParams(&commandPacket,TYPE_DISTANCE,1);
 			commandPacket.command = COMMAND_REVERSE;
 			sendPacket(&commandPacket);
 			break;
-		case 'D':
+		case 'S':
 			setWASDParams(&commandPacket,TYPE_DISTANCE,2);
 			commandPacket.command = COMMAND_REVERSE;
+			sendPacket(&commandPacket);
+			break;
+		case 'd':
+			setWASDParams(&commandPacket,TYPE_ANGLE,1);
+			commandPacket.command = COMMAND_TURN_RIGHT;
+			sendPacket(&commandPacket);
+			break;
+		case 'D':
+			setWASDParams(&commandPacket,TYPE_ANGLE,2);
+			commandPacket.command = COMMAND_TURN_RIGHT;
 			sendPacket(&commandPacket);
 			break;
 		case 'i':
