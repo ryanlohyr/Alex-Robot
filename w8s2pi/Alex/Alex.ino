@@ -51,12 +51,12 @@ float alexCirc = 0.0;
  */
 
 //TRIG variables
-#define TRIG 1 //TRIG pin
-#define ECHO 0 //ECHO pin 
+#define TRIG A1 //TRIG pin
+#define ECHO A0 //ECHO pin 
 
 #define SPEED_OF_SOUND 347
 #define TIMEOUT 2000 // Max microseconds to wait; choose according to max distance of wall 
-#define cmsThreshold 6 
+#define cmsThreshold 6 //distance for cms
 
 #define ONULTRASONIC 1;
 
@@ -176,27 +176,59 @@ void sendResponse(TPacket *packet)
  writeSerial(buffer, len);
 }
 
+
+
 void sendColourStatus(){
-  // Read Red freqency
-  digitalWrite(S2,LOW);
-  digitalWrite(S3,LOW);
+
+//bare metal version ---------------------
+  PORTB &= ~(1<<S2); //set S2 pin as LOW
+  PORTB &= ~(1<<S3); //set S3 pin as LOW
   R = pulseIn(OUT, LOW);
   delay(100);
   R = map(R, BR, WR, 0, 255);
   
   // Read Green freqency
-  digitalWrite(S2,HIGH);
-  digitalWrite(S3,HIGH);
-  G = pulseIn(OUT, LOW);  // Reading the output Green frequency
+  PORTB |= (1 << S2_PIN); //set S2 pin as HIGH
+  PORTB |= (1 << S3_PIN); //set S3 pin as HIGH
+  G = pulseIn(OUT, LOW);  // Reading the outpt Green frequency
   delay(100);
   G = map(G, BG, WG, 0, 255);
   
   // Setting Blue frequency, delete later
-  digitalWrite(S2,LOW);
-  digitalWrite(S3,HIGH);
+  PORTB &= ~(1<<S2); //set S2 pin as LOW
+  PORTB |= (1 << S3); //set S3 pin as HIGH
   B = pulseIn(OUT, LOW);  // Reading the output Blue frequency
   delay(100);
   B = map(B, BB, WB, 0, 255);
+
+
+//bare metal version ---------------------
+
+//old version --------------------------
+
+  // // Read Red freqency
+  // digitalWrite(S2,LOW);
+  // digitalWrite(S3,LOW);
+
+  // R = pulseIn(OUT, LOW);
+  // delay(100);
+  // R = map(R, BR, WR, 0, 255);
+  
+  // // Read Green freqency
+  // digitalWrite(S2,HIGH);
+  // digitalWrite(S3,HIGH);
+  // G = pulseIn(OUT, LOW);  // Reading the output Green frequency
+  // delay(100);
+  // G = map(G, BG, WG, 0, 255);
+  
+  // // Setting Blue frequency, delete later
+  // digitalWrite(S2,LOW);
+  // digitalWrite(S3,HIGH);
+  // B = pulseIn(OUT, LOW);  // Reading the output Blue frequency
+  // delay(100);
+  // B = map(B, BB, WB, 0, 255);
+
+//old version --------------------------
 
   dbprintf("R = %i", R);
   dbprintf("G = %i", G);
@@ -411,12 +443,14 @@ void startSerial()
 // to drive the motors.
 void setupMotors()
 {
+
   /* Our motor set up is:  
-   *    A1IN - Pin 5, PD5, OC0B
-   *    A2IN - Pin 6, PD6, OC0A
-   *    B1IN - Pin 10, PB2, OC1B
-   *    B2In - pIN 11, PB3, OC2A
+   *    A1IN - Pin 5, PD5, OC0B LEFT REVERSE
+   *    A2IN - Pin 6, PD6, OC0A LEFT FORWARD
+   *    B1IN - Pin 10, PB2, OC1B RIGHT FORWARD
+   *    B2In - pIN 11, PB3, OC2A RIGHT REVERSE
    */
+
 }
 
 // Start the PWM for Alex's motors.
@@ -633,13 +667,36 @@ void initializeState()
 }
 
 void setupColour(){
-  pinMode(S0, OUTPUT);
-  pinMode(S1,OUTPUT);
-  pinMode(S2,OUTPUT);
-  pinMode(S3,OUTPUT);
-  pinMode(OUT,INPUT);
-  digitalWrite(S0,HIGH);
-  digitalWrite(S1,LOW);
+
+  //bare metal version ---------------------
+
+  // Set DDRB register to configure pins 7, 8, 9, and 12 as output
+  DDRB |= (1 << S0) | (1 << S1) | (1 << S2) | (1 << S3);
+
+  // Set DDRB register to configure pin 13 as input
+  DDRB &= ~(1 << OUT);
+  
+  // set S0 to HIGH and S1 to LOW
+  PORTD |= (1 << S0); // set bit 7 of PORTD to 1
+  PORTB &= ~(1 << S1); // set bit 0 of PORTB to 0
+
+  //baremetal version end --------------------------
+
+  //old version --------------------------
+
+  // pinMode(S0, OUTPUT);
+  // pinMode(S1,OUTPUT);
+  // pinMode(S2,OUTPUT);
+  // pinMode(S3,OUTPUT);
+  // pinMode(OUT,INPUT);
+
+  //digitalWrite(S0,HIGH);
+  //digitalWrite(S1,LOW);
+
+  //old version end --------------------------
+
+  
+  
 }
 
 void handleCommand(TPacket *command)
@@ -735,6 +792,28 @@ void waitForHello()
   } // !exit
 }
 
+void setupUltrasonic()
+{
+  //baremetal version ---------------- double confirm this
+
+
+  // Set the trigger pin as an output
+  // PORTC |= (1 << TRIG);
+  DDRC |= (1 << TRIG);
+
+  // Set the echo pin as an input
+  // PORTC &= ~(1 << ECHO);
+  DDRC &= ~(1 << ECHO);
+
+  //baremetal version ----------------
+
+  //old version ----------------
+
+  // pinMode(TRIG, OUTPUT); // Sets the trigPin as an Output
+  // pinMode(ECHO, INPUT); // Sets the echoPin as an Input
+
+  //old version ----------------
+}
 void setup() {
   // put your setup code here, to run once:
   //Compute diagonal
@@ -751,8 +830,8 @@ void setup() {
   enablePullups();
   initializeState();
   setupColour();
-  // pinMode(TRIG, OUTPUT); // Sets the trigPin as an Output
-  // pinMode(ECHO, INPUT); // Sets the echoPin as an Input
+  setupUltrasonic();
+  
   sei();
 }
 
@@ -777,6 +856,32 @@ void handlePacket(TPacket *packet)
       break;
   }
 }
+int determine_distance(){
+  //bare metal version --------
+  // PORTC &= ~(1 << TRIG);
+  // delayMicroseconds(2); 
+  // PORTC |= (1 << TRIG); //set trig pin as HIGH
+  // PORTC &= ~(1 << TRIG); //set trig pin as low 
+  // delayMicroseconds(10); 
+  //bare metal version --------
+  
+  //old version ---------
+  digitalWrite(TRIG, LOW); 
+  delayMicroseconds(2); 
+
+  digitalWrite(TRIG, HIGH); 
+  digitalWrite(TRIG, LOW); 
+  delayMicroseconds(10); 
+
+  //old version ---------
+
+  long duration = pulseIn(ECHO, HIGH, TIMEOUT); // microseconds
+  float currentCMS = duration * SPEED_OF_SOUND / 2 / 10000;
+  if(currentCMS < 0){ //if its negative means that it is too far away from the wall
+    return 0;
+  }
+  return (int)currentCMS; 
+}
 
 void loop() { 
   TPacket recvPacket; // This holds commands from the Pi
@@ -795,23 +900,21 @@ void loop() {
       } 
 
   //TRIG IMPLEMENTATIONS
-  digitalWrite(TRIG, LOW); 
-  delayMicroseconds(2); 
-  digitalWrite(TRIG, HIGH); 
-  digitalWrite(TRIG, LOW); 
-  delayMicroseconds(10); 
-  long duration = pulseIn(ECHO, HIGH, TIMEOUT); // microseconds
-  float cms = duration * SPEED_OF_SOUND / 2 / 10000; 
- 
-    
+
+  bool tooNear = true;
+  int cms = determine_distance();
+  if(0<cms<cmsThreshold){
+    tooNear = false;
+  }
+
   if (deltaDist > 0){
     if (dir == FORWARD){
-      if (cms < cmsThreshold || forwardDist > newDist){
+      if (tooNear || forwardDist > newDist){
         deltaDist = 0;
         newDist = 0;
         stop();
-        if(cms<cmsThreshold){
-          dbprintf("Potential wall/hump detected, cms = %i cm \n",(int)5);
+        if(tooNear){
+          dbprintf("Potential wall/hump detected, cms = %i cm \n",(int)cms);
         }
       }
 
