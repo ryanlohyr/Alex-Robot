@@ -8,15 +8,16 @@
 #include "serialize.h"
 #include "constants.h"
 
+
 #define PORT_NAME			"/dev/ttyACM0"
 #define BAUD_RATE			B9600
 // #define CLEAR 				'c'
 
 
 //variables for WASD functionality
-#define DEFAULT_ANGLE 45
+#define DEFAULT_ANGLE 10
 #define DEFAULT_DISTANCE 8
-#define DEFAULT_POWER 70
+#define DEFAULT_POWER 80
 #define TYPE_ANGLE 1
 #define TYPE_DISTANCE 0
 
@@ -328,12 +329,12 @@ int main()
 
 	while(!exitFlag)
 	{
-		char ch;
+		char ch = '\n';
 		printf("Command (w,a,s,d,f=forward, b=reverse, l=turn left, r=turn right, x=stop, c=clear stats, i=identify object, g=get stats q=exit)\n");
-		scanf("%c", &ch);
-
+		//scanf("%c", &ch);
+		ch = getchar();
 		// Purge extraneous characters from input stream
-		flushInput();
+		//flushInput();
 
 		sendCommand(ch);
 		// sendCommand(CLEAR); //doing this method causing magic error
