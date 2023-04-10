@@ -51,8 +51,8 @@ float alexCirc = 0.0;
  */
 
 //TRIG variables
-#define TRIG A1 //TRIG pin
-#define ECHO A0 //ECHO pin 
+#define TRIG A0 //TRIG pin
+#define ECHO A1 //ECHO pin 
 
 #define SPEED_OF_SOUND 347
 #define TIMEOUT 2000 // Max microseconds to wait; choose according to max distance of wall 
@@ -176,70 +176,162 @@ void sendResponse(TPacket *packet)
  writeSerial(buffer, len);
 }
 
+int determine_hue(int R, int G, int B){
+  double red = (double)R/255;
+  double green = (double)G/255;
+  double blue = (double)B/255;
+  double newArray[3] = {red,green,blue};
+  for(long i = 0; i <2;i++){
+    long flag = 0;
+    for(long j = 0 ; j < 3 - (i + 1); j++){
+      if (newArray[j+1] < newArray[j]){
+          double temp = newArray[j + 1];
+          newArray[j + 1] = newArray[j];
+          newArray[j] = temp;
+          flag += 1;
+     }
+      }
+    if(flag == 0){
+      break;
+    }
+  }
+  
+  double hue = 0;
+  if(newArray[2] == red){
+    hue = (green - blue)/(newArray[2] - newArray[0]);
+  }else if(newArray[2] == green){
+    hue = 2.0 + (blue - red)/(newArray[2] - newArray[0]);
+  }else{
+    hue = 4.0 + (red - green)/(newArray[2] - newArray[0]);
+  }
+  if(hue < 0){
+     hue = hue * 60;
+      return hue + 360;
+  }
+  return hue * 60;
+}
+
 
 
 void sendColourStatus(){
 
 //bare metal version ---------------------
-  PORTB &= ~(1<<S2); //set S2 pin as LOW
-  PORTB &= ~(1<<S3); //set S3 pin as LOW
-  R = pulseIn(OUT, LOW);
-  delay(100);
-  R = map(R, BR, WR, 0, 255);
+  // PORTB &= ~(1<<S2); //set S2 pin as LOW
+  // PORTB &= ~(1<<S3); //set S3 pin as LOW
+  // R = pulseIn(OUT, LOW);
+  // delay(100);
+  // R = map(R, BR, WR, 0, 255);
   
-  // Read Green freqency
-  PORTB |= (1 << S2_PIN); //set S2 pin as HIGH
-  PORTB |= (1 << S3_PIN); //set S3 pin as HIGH
-  G = pulseIn(OUT, LOW);  // Reading the outpt Green frequency
-  delay(100);
-  G = map(G, BG, WG, 0, 255);
+  // // Read Green freqency
+  // PORTB |= (1 << S2); //set S2 pin as HIGH
+  // PORTB |= (1 << S3); //set S3 pin as HIGH
+  // G = pulseIn(OUT, LOW);  // Reading the outpt Green frequency
+  // delay(100);
+  // G = map(G, BG, WG, 0, 255);
   
-  // Setting Blue frequency, delete later
-  PORTB &= ~(1<<S2); //set S2 pin as LOW
-  PORTB |= (1 << S3); //set S3 pin as HIGH
-  B = pulseIn(OUT, LOW);  // Reading the output Blue frequency
-  delay(100);
-  B = map(B, BB, WB, 0, 255);
+  // // Setting Blue frequency, delete later
+  // PORTB &= ~(1<<S2); //set S2 pin as LOW
+  // PORTB |= (1 << S3); //set S3 pin as HIGH
+  // B = pulseIn(OUT, LOW);  // Reading the output Blue frequency
+  // delay(100);
+  // B = map(B, BB, WB, 0, 255);
 
 
 //bare metal version ---------------------
 
 //old version --------------------------
 
-  // // Read Red freqency
-  // digitalWrite(S2,LOW);
-  // digitalWrite(S3,LOW);
+  // Read Red freqency
+  digitalWrite(S2,LOW);
+  digitalWrite(S3,LOW);
 
-  // R = pulseIn(OUT, LOW);
-  // delay(100);
-  // R = map(R, BR, WR, 0, 255);
+  R = pulseIn(OUT, LOW);
+  dbprintf("pre mapped R = %i", R);
   
-  // // Read Green freqency
-  // digitalWrite(S2,HIGH);
-  // digitalWrite(S3,HIGH);
-  // G = pulseIn(OUT, LOW);  // Reading the output Green frequency
-  // delay(100);
-  // G = map(G, BG, WG, 0, 255);
+  delay(100);
+  R = map(R, BR, WR, 0, 255); 
+
+  // Read Green freqency
+  digitalWrite(S2,HIGH);
+  digitalWrite(S3,HIGH);
+  G = pulseIn(OUT, LOW);  // Reading the output Green frequency
+  dbprintf("pre mapped G = %i", G);
+  delay(100);
+  G = map(G, BG, WG, 0, 255);
   
-  // // Setting Blue frequency, delete later
-  // digitalWrite(S2,LOW);
-  // digitalWrite(S3,HIGH);
-  // B = pulseIn(OUT, LOW);  // Reading the output Blue frequency
-  // delay(100);
-  // B = map(B, BB, WB, 0, 255);
+  // Setting Blue frequency, delete later
+  digitalWrite(S2,LOW);
+  digitalWrite(S3,HIGH);
+  B = pulseIn(OUT, LOW);  // Reading the output Blue frequency
+  dbprintf("Pre mapped B = %i", B);
+  delay(100);
+  B = map(B, BB, WB, 0, 255);
 
 //old version --------------------------
 
   dbprintf("R = %i", R);
   dbprintf("G = %i", G);
   dbprintf("B = %i", B);
-
+  
   if(R>60 && R<120 && G>120 && G<180 && B>40 && B<70){
     dbprintf("likely green");
   }
   if(R>230){
     dbprintf("likely orange or red");
   }
+
+}
+
+void testSendColourStatus(){
+
+  //TO BE REBASED IN EACH ENVIRONMENT
+  //white array and black array has to be over/underestimated 
+  //to ensure that values do not exceed the initial ranges
+  //(so that range of R,G,B gets accurately mapped to 0 255)
+  int whiteArray[] = {100,70,75};
+  int blackArray[] = {350,310,200};
+
+
+  // Read Red freqency
+  digitalWrite(S2,LOW);
+  digitalWrite(S3,LOW);
+
+  R = pulseIn(OUT, LOW);
+  dbprintf("pre mapped R = %i", R);
+  
+  delay(100);
+  R = map(R, blackArray[0], whiteArray[0], 0, 255);
+  // Read Green freqency
+  digitalWrite(S2,HIGH);
+  digitalWrite(S3,HIGH);
+  G = pulseIn(OUT, LOW);  // Reading the output Green frequency
+  dbprintf("pre mapped G = %i", G);
+  delay(100);
+  G = map(G, blackArray[1], whiteArray[1], 0, 255);
+  
+  // Setting Blue frequency, delete later
+  digitalWrite(S2,LOW);
+  digitalWrite(S3,HIGH);
+  B = pulseIn(OUT, LOW);  // Reading the output Blue frequency
+  dbprintf("Pre mapped B = %i", B);
+  delay(100);
+  B = map(B, blackArray[2], whiteArray[2], 0, 255);
+
+
+
+  dbprintf("R = %i", R);
+  dbprintf("G = %i", G);
+  dbprintf("B = %i", B);
+  
+  int hue = determine_hue(R,G,B);
+  dbprintf("hue is %i \n",hue);
+
+  //TO ADD LOGIC IN LAB
+  //CHECK HUE LEVE OF RESPECTIVE COLOURS 
+  //IF RESPECTIVE COLOURS OVERLAP 
+  //CHECK individual rgb values to distinguish
+  
+
 }
 
 void sendStatus()
@@ -671,27 +763,27 @@ void setupColour(){
   //bare metal version ---------------------
 
   // Set DDRB register to configure pins 7, 8, 9, and 12 as output
-  DDRB |= (1 << S0) | (1 << S1) | (1 << S2) | (1 << S3);
+  // DDRB |= (1 << S0) | (1 << S1) | (1 << S2) | (1 << S3);
 
-  // Set DDRB register to configure pin 13 as input
-  DDRB &= ~(1 << OUT);
+  // // Set DDRB register to configure pin 13 as input
+  // DDRB &= ~(1 << OUT);
   
-  // set S0 to HIGH and S1 to LOW
-  PORTD |= (1 << S0); // set bit 7 of PORTD to 1
-  PORTB &= ~(1 << S1); // set bit 0 of PORTB to 0
+  // // set S0 to HIGH and S1 to LOW
+  // PORTD |= (1 << S0); // set bit 7 of PORTD to 1
+  // PORTB &= ~(1 << S1); // set bit 0 of PORTB to 0
 
   //baremetal version end --------------------------
 
   //old version --------------------------
 
-  // pinMode(S0, OUTPUT);
-  // pinMode(S1,OUTPUT);
-  // pinMode(S2,OUTPUT);
-  // pinMode(S3,OUTPUT);
-  // pinMode(OUT,INPUT);
+  pinMode(S0, OUTPUT);
+  pinMode(S1,OUTPUT);
+  pinMode(S2,OUTPUT);
+  pinMode(S3,OUTPUT);
+  pinMode(OUT,INPUT);
 
-  //digitalWrite(S0,HIGH);
-  //digitalWrite(S1,LOW);
+  digitalWrite(S0,HIGH);
+  digitalWrite(S1,LOW);
 
   //old version end --------------------------
 
@@ -743,7 +835,8 @@ void handleCommand(TPacket *command)
       break;
     case COMMAND_IDENTIFY_COLOUR:
         sendOK();
-        sendColourStatus();
+        // sendColourStatus();
+        testSendColourStatus();
         break;
     case COMMAND_CLEAR_STATS:
         clearOneCounter(command->params[0]);
@@ -799,20 +892,20 @@ void setupUltrasonic()
 
   // Set the trigger pin as an output
   // PORTC |= (1 << TRIG);
-  DDRC |= (1 << TRIG);
+  // DDRC |= (1 << TRIG);
 
-  // Set the echo pin as an input
+  // // // Set the echo pin as an input
   // PORTC &= ~(1 << ECHO);
-  DDRC &= ~(1 << ECHO);
+  // DDRC &= ~(1 << ECHO);
 
   //baremetal version ----------------
 
   //old version ----------------
 
-  // pinMode(TRIG, OUTPUT); // Sets the trigPin as an Output
-  // pinMode(ECHO, INPUT); // Sets the echoPin as an Input
-
-  //old version ----------------
+  pinMode(ECHO, INPUT); // Sets the echoPin as an Input
+  pinMode(TRIG, OUTPUT); // Sets the trigPin as an Output
+  // //old version ----------------
+  
 }
 void setup() {
   // put your setup code here, to run once:
@@ -858,25 +951,27 @@ void handlePacket(TPacket *packet)
 }
 int determine_distance(){
   //bare metal version --------
-  // PORTC &= ~(1 << TRIG);
-  // delayMicroseconds(2); 
-  // PORTC |= (1 << TRIG); //set trig pin as HIGH
-  // PORTC &= ~(1 << TRIG); //set trig pin as low 
-  // delayMicroseconds(10); 
+  //PORTC &= ~(1 << TRIG);
+  //delayMicroseconds(2); 
+  //PORTC |= (1 << TRIG); //set trig pin as HIGH
+  //PORTC &= ~(1 << TRIG); //set trig pin as low 
+  //delayMicroseconds(10); 
   //bare metal version --------
   
   //old version ---------
-  digitalWrite(TRIG, LOW); 
-  delayMicroseconds(2); 
+   digitalWrite(TRIG, LOW); 
+   delayMicroseconds(2); 
 
-  digitalWrite(TRIG, HIGH); 
-  digitalWrite(TRIG, LOW); 
-  delayMicroseconds(10); 
+   digitalWrite(TRIG, HIGH); 
+   digitalWrite(TRIG, LOW); 
+   delayMicroseconds(10); 
 
   //old version ---------
 
   long duration = pulseIn(ECHO, HIGH, TIMEOUT); // microseconds
+  //dbprintf("duration is %i \n",(int)duration);
   float currentCMS = duration * SPEED_OF_SOUND / 2 / 10000;
+  
   if(currentCMS < 0){ //if its negative means that it is too far away from the wall
     return 0;
   }
@@ -899,20 +994,23 @@ void loop() {
         sendBadChecksum();
       } 
 
-  //TRIG IMPLEMENTATIONS
-
-  bool tooNear = true;
-  int cms = determine_distance();
-  if(0<cms<cmsThreshold){
-    tooNear = false;
-  }
-
   if (deltaDist > 0){
     if (dir == FORWARD){
+      bool tooNear = false;
+      int cms = determine_distance();
+      if(cms<cmsThreshold && cms > 0){
+        tooNear = true;
+      }
       if (tooNear || forwardDist > newDist){
         deltaDist = 0;
         newDist = 0;
         stop();
+        if(cms == 0){
+          dbprintf("coast clear");
+        }else{
+          dbprintf("obect %icm away \n",(int)cms);
+        }
+        
         if(tooNear){
           dbprintf("Potential wall/hump detected, cms = %i cm \n",(int)cms);
         }
@@ -933,21 +1031,34 @@ void loop() {
   }
 
   if (deltaTicks > 0) {
+    
     if (dir == LEFT) {
       if (/*leftReverseTicksTurns >= targetTicks*/ leftReverseTicksTurns >= targetLeftTicks || rightForwardTicksTurns >= targetRightTicks) {
+        int cms = determine_distance();
         deltaTicks = 0;
         targetTicks = 0;
         targetLeftTicks = 0;
         targetRightTicks = 0;
         stop();
+        if(cms == 0){
+          dbprintf("coast clear");
+        }else{
+          dbprintf("obect %icm away \n",(int)cms);
+        }
       }
     } else if (dir == RIGHT) {
       if (/*rightReverseTicksTurns >= targetTicks*/ rightReverseTicksTurns >= targetRightTicks || leftForwardTicksTurns >= targetLeftTicks) {
+        int cms = determine_distance();
         deltaTicks = 0;
         targetTicks = 0;
         targetLeftTicks = 0;
         targetRightTicks = 0;
         stop(); 
+        if(cms == 0){
+          dbprintf("coast clear");
+        }else{
+          dbprintf("obect %icm away \n",(int)cms);
+        }
       }
     } else if (dir == STOP) {
       deltaTicks = 0;
