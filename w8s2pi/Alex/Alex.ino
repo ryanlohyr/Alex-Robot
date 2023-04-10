@@ -50,6 +50,17 @@ float alexCirc = 0.0;
  *    Alex's State Variables
  */
 
+//TRIG variables
+#define TRIG 1 //TRIG pin
+#define ECHO 0 //ECHO pin 
+
+#define SPEED_OF_SOUND 347
+#define TIMEOUT 2000 // Max microseconds to wait; choose according to max distance of wall 
+#define cmsThreshold 6 
+
+#define ONULTRASONIC 1;
+
+
 // Store the ticks from Alex's left and
 // right encoders.
 volatile unsigned long leftForwardTicks; 
@@ -62,6 +73,8 @@ volatile unsigned long leftForwardTicksTurns;
 volatile unsigned long leftReverseTicksTurns;
 volatile unsigned long rightForwardTicksTurns;
 volatile unsigned long rightReverseTicksTurns;
+volatile unsigned long targetLeftTicks = 0;
+volatile unsigned long targetRightTicks = 0;
 
 // Store the revolutions on Alex's left
 // and right wheels
@@ -84,14 +97,20 @@ unsigned long targetTicks;
 #define S2 9
 #define S3 12 
 #define OUT 13
-#define UPPERR 205
-#define LOWERR 170
-#define UPPERG 212
-#define LOWERG 110
-#define UPPERB
-#define LOWERB
+#define WR 164
+#define WG 151
+#define WB 105
+#define BR 246
+#define BG 216
+#define BB 145
+//#define UPPERR 205
+//#define LOWERR 170
+//#define UPPERG 212
+//#define LOWERG 110
+//#define UPPERB 
+//#define LOWERB 
 
-unsigned long R,G,B = 0;
+int R,G,B = 0;
 
 
 //#define LedRed    A2
@@ -162,25 +181,33 @@ void sendColourStatus(){
   digitalWrite(S2,LOW);
   digitalWrite(S3,LOW);
   R = pulseIn(OUT, LOW);
-  delay(100); 
-  R = map(R, LOWERR, UPPERR, 255, 0);
+  delay(100);
+  R = map(R, BR, WR, 0, 255);
   
   // Read Green freqency
   digitalWrite(S2,HIGH);
   digitalWrite(S3,HIGH);
   G = pulseIn(OUT, LOW);  // Reading the output Green frequency
   delay(100);
-  G = map(G, LOWERG, UPPERG, 255, 0);
+  G = map(G, BG, WG, 0, 255);
   
   // Setting Blue frequency, delete later
-//  digitalWrite(S2,LOW);
-//  digitalWrite(S3,HIGH);
-//  B = pulseIn(OUT, LOW);  // Reading the output Blue frequency
-//  delay(100);
-//  //B = map(B, LOWERB, UPPERB, 255, 0);
+  digitalWrite(S2,LOW);
+  digitalWrite(S3,HIGH);
+  B = pulseIn(OUT, LOW);  // Reading the output Blue frequency
+  delay(100);
+  B = map(B, BB, WB, 0, 255);
 
   dbprintf("R = %i", R);
   dbprintf("G = %i", G);
+  dbprintf("B = %i", B);
+
+  if(R>60 && R<120 && G>120 && G<180 && B>40 && B<70){
+    dbprintf("likely green");
+  }
+  if(R>230){
+    dbprintf("likely orange or red");
+  }
 }
 
 void sendStatus()
@@ -420,7 +447,6 @@ int pwmVal(float speed)
 
 void forward(int dist, int speed)
 {
-//  //Activity 4 w8s2
   dbprintf("Dist: %i \n", dist);
   dbprintf("Speed: %i \n", speed);
   if(dist > 0) {
@@ -428,6 +454,8 @@ void forward(int dist, int speed)
   } else {
     deltaDist = 9999999;
   }
+  dbprintf("deltadist: %i \n", deltaDist);
+  dbprintf("forwarddist: %i \n", forwardDist);
   newDist = forwardDist + deltaDist;
   dir = FORWARD;
   dbprintf("f ok\n");
@@ -436,9 +464,13 @@ void forward(int dist, int speed)
   // LF = Left forward pin, LR = Left reverse pin
   // RF = Right forward pin, RR = Right reverse pin
   // This will be replaced later with bare-metal code. 
-  analogWrite(LF, (val));
-  analogWrite(RF, (val));
-  analogWrite(LR,0);
+
+  int rightVal = val-10;
+  int leftVal = val;
+  
+  analogWrite(LF, leftVal);
+  analogWrite(RF, rightVal);
+  analogWrite(LR, 0);
   analogWrite(RR, 0);
 }
 
@@ -457,9 +489,9 @@ void reverse(int dist, int speed)
   } else {
     deltaDist = 9999999;
   }
-  newDist = forwardDist + deltaDist;
+  newDist = reverseDist + deltaDist;
   dir = BACKWARD;
-  dbprintf("fowardDist: %i \n", forwardDist);
+  dbprintf("reverseDist: %i \n", reverseDist);
   dbprintf("deltaDist: %i \n", deltaDist);
   dbprintf("Newdist: %i \n", newDist);
 
@@ -468,12 +500,14 @@ void reverse(int dist, int speed)
   // For now we will ignore dist and 
   // reverse indefinitely. We will fix this
   // in Week 9.
-
+  int rightVal = val -15;
+  int leftVal = val+10;
+  
   // LF = Left forward pin, LR = Left reverse pin
   // RF = Right forward pin, RR = Right reverse pin
   // This will be replaced later with bare-metal code.
-  analogWrite(LR, val);
-  analogWrite(RR, val);
+  analogWrite(LR, leftVal);
+  analogWrite(RR, rightVal);
   analogWrite(LF, 0);
   analogWrite(RF, 0);
 }
@@ -504,6 +538,10 @@ void left(float ang, float speed)
   }
 
   targetTicks = leftReverseTicksTurns + deltaTicks;
+
+  targetLeftTicks = leftReverseTicksTurns + deltaTicks;
+  targetRightTicks = rightForwardTicksTurns + deltaTicks;
+  
   dbprintf("Tticks = %ld\n", targetTicks);
 
   // For now we will ignore ang. We will fix this in Week 9.
@@ -536,7 +574,11 @@ void right(int ang, int speed)
     deltaTicks = computeDeltaTicks((float)ang);
   }
 
-  targetTicks = leftForwardTicksTurns + deltaTicks;
+  targetTicks = rightReverseTicksTurns + deltaTicks;
+
+  
+  targetLeftTicks = leftForwardTicksTurns + deltaTicks;
+  targetRightTicks = rightReverseTicksTurns + deltaTicks;
 
   // For now we will ignore ang. We will fix this in Week 9.
   // We will also replace this code with bare-metal later.
@@ -557,7 +599,7 @@ void stop()
   analogWrite(LR, 0);
   analogWrite(RF, 0);
   analogWrite(RR, 0);
-  clearCounters();
+  //clearCounters();
 }
 
 // Clears all our counters
@@ -608,28 +650,28 @@ void handleCommand(TPacket *command)
     case COMMAND_FORWARD:
         sendOK();
         forward((int) command->params[0], (int) command->params[1]);
-        clearCounters();
+        //clearCounters();
       break;
       
     // For movement commands, param[0] = distance, param[1] = speed.
     case COMMAND_REVERSE:
         sendOK();
         reverse((int) command->params[0], (int) command->params[1]);
-        clearCounters();
+        //clearCounters();
       break;
 
     // For movement commands, param[0] = distance, param[1] = speed.
     case COMMAND_TURN_LEFT:
         sendOK();
         left((int) command->params[0], (int) command->params[1]);
-        clearCounters();
+        //clearCounters();
       break;
 
     // For movement commands, param[0] = distance, param[1] = speed.
     case COMMAND_TURN_RIGHT:
         sendOK();
         right((int) command->params[0], (int) command->params[1]);
-        clearCounters();
+        //clearCounters();
       break;
 
     // For movement commands, param[0] = distance, param[1] = speed.
@@ -709,6 +751,8 @@ void setup() {
   enablePullups();
   initializeState();
   setupColour();
+  // pinMode(TRIG, OUTPUT); // Sets the trigPin as an Output
+  // pinMode(ECHO, INPUT); // Sets the echoPin as an Input
   sei();
 }
 
@@ -749,14 +793,28 @@ void loop() {
       {
         sendBadChecksum();
       } 
+
+  //TRIG IMPLEMENTATIONS
+  digitalWrite(TRIG, LOW); 
+  delayMicroseconds(2); 
+  digitalWrite(TRIG, HIGH); 
+  digitalWrite(TRIG, LOW); 
+  delayMicroseconds(10); 
+  long duration = pulseIn(ECHO, HIGH, TIMEOUT); // microseconds
+  float cms = duration * SPEED_OF_SOUND / 2 / 10000; 
+ 
+    
   if (deltaDist > 0){
     if (dir == FORWARD){
-      if (forwardDist > newDist){
+      if (cms < cmsThreshold || forwardDist > newDist){
         deltaDist = 0;
         newDist = 0;
         stop();
-      
+        if(cms<cmsThreshold){
+          dbprintf("Potential wall/hump detected, cms = %i cm \n",(int)5);
+        }
       }
+
     } else if (dir == BACKWARD){
        if (reverseDist > newDist){
         deltaDist = 0;
@@ -773,15 +831,19 @@ void loop() {
 
   if (deltaTicks > 0) {
     if (dir == LEFT) {
-    if (leftReverseTicksTurns >= targetTicks) {
-      deltaTicks = 0;
-      targetTicks = 0;
-      stop();
-    }
-  } else if (dir == RIGHT) {
-      if (rightReverseTicksTurns >= targetTicks) {
+      if (/*leftReverseTicksTurns >= targetTicks*/ leftReverseTicksTurns >= targetLeftTicks || rightForwardTicksTurns >= targetRightTicks) {
         deltaTicks = 0;
         targetTicks = 0;
+        targetLeftTicks = 0;
+        targetRightTicks = 0;
+        stop();
+      }
+    } else if (dir == RIGHT) {
+      if (/*rightReverseTicksTurns >= targetTicks*/ rightReverseTicksTurns >= targetRightTicks || leftForwardTicksTurns >= targetLeftTicks) {
+        deltaTicks = 0;
+        targetTicks = 0;
+        targetLeftTicks = 0;
+        targetRightTicks = 0;
         stop(); 
       }
     } else if (dir == STOP) {
@@ -790,8 +852,7 @@ void loop() {
       stop();
     }
   }
-  
+}  
 
 
-  
-}
+
