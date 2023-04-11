@@ -329,12 +329,13 @@ int main()
 
 	while(!exitFlag)
 	{
-		char ch = '\n';
+		// char ch = '\n';
+		char ch;
 		printf("Command (w,a,s,d,f=forward, b=reverse, l=turn left, r=turn right, x=stop, c=clear stats, i=identify object, g=get stats q=exit)\n");
-		//scanf("%c", &ch);
-		ch = getchar();
+		scanf("%c", &ch);
+		// ch = getchar();
 		// Purge extraneous characters from input stream
-		//flushInput();
+		flushInput();
 
 		sendCommand(ch);
 		// sendCommand(CLEAR); //doing this method causing magic error
