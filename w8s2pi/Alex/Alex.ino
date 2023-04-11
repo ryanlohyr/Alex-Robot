@@ -103,12 +103,10 @@ unsigned long targetTicks;
 #define BR 246
 #define BG 216
 #define BB 145
-//#define UPPERR 205
-//#define LOWERR 170
-//#define UPPERG 212
-//#define LOWERG 110
-//#define UPPERB 
-//#define LOWERB 
+#define UPPERR 20
+#define LOWERR 0
+#define UPPERG 100
+#define LOWERG 60
 
 int R,G,B = 0;
 
@@ -211,7 +209,19 @@ int determine_hue(int R, int G, int B){
   return hue * 60;
 }
 
+bool is_green (int hue) {
+  if (hue > LOWERG && hue < UPPERG) {
+    return true;
+  }
+  return false;
+}
 
+bool is_redorange (int hue) {
+  if (hue > LOWERR && hue < UPPERR) {
+    return true;
+  }
+  return false;
+}
 
 void sendColourStatus(){
 
@@ -246,7 +256,7 @@ void sendColourStatus(){
   digitalWrite(S3,LOW);
 
   R = pulseIn(OUT, LOW);
-  dbprintf("pre mapped R = %i", R);
+ // dbprintf("pre mapped R = %i", R);
   
   delay(100);
   R = map(R, BR, WR, 0, 255); 
@@ -255,7 +265,7 @@ void sendColourStatus(){
   digitalWrite(S2,HIGH);
   digitalWrite(S3,HIGH);
   G = pulseIn(OUT, LOW);  // Reading the output Green frequency
-  dbprintf("pre mapped G = %i", G);
+//  dbprintf("pre mapped G = %i", G);
   delay(100);
   G = map(G, BG, WG, 0, 255);
   
@@ -263,7 +273,7 @@ void sendColourStatus(){
   digitalWrite(S2,LOW);
   digitalWrite(S3,HIGH);
   B = pulseIn(OUT, LOW);  // Reading the output Blue frequency
-  dbprintf("Pre mapped B = %i", B);
+//  dbprintf("Pre mapped B = %i", B);
   delay(100);
   B = map(B, BB, WB, 0, 255);
 
@@ -272,67 +282,68 @@ void sendColourStatus(){
   dbprintf("R = %i", R);
   dbprintf("G = %i", G);
   dbprintf("B = %i", B);
-  
-  if(R>60 && R<120 && G>120 && G<180 && B>40 && B<70){
-    dbprintf("likely green");
-  }
-  if(R>230){
-    dbprintf("likely orange or red");
-  }
 
-}
-
-void testSendColourStatus(){
-
-  //TO BE REBASED IN EACH ENVIRONMENT
-  //white array and black array has to be over/underestimated 
-  //to ensure that values do not exceed the initial ranges
-  //(so that range of R,G,B gets accurately mapped to 0 255)
-  int whiteArray[] = {100,70,75};
-  int blackArray[] = {350,310,200};
-
-
-  // Read Red freqency
-  digitalWrite(S2,LOW);
-  digitalWrite(S3,LOW);
-
-  R = pulseIn(OUT, LOW);
-  dbprintf("pre mapped R = %i", R);
-  
-  delay(100);
-  R = map(R, blackArray[0], whiteArray[0], 0, 255);
-  // Read Green freqency
-  digitalWrite(S2,HIGH);
-  digitalWrite(S3,HIGH);
-  G = pulseIn(OUT, LOW);  // Reading the output Green frequency
-  dbprintf("pre mapped G = %i", G);
-  delay(100);
-  G = map(G, blackArray[1], whiteArray[1], 0, 255);
-  
-  // Setting Blue frequency, delete later
-  digitalWrite(S2,LOW);
-  digitalWrite(S3,HIGH);
-  B = pulseIn(OUT, LOW);  // Reading the output Blue frequency
-  dbprintf("Pre mapped B = %i", B);
-  delay(100);
-  B = map(B, blackArray[2], whiteArray[2], 0, 255);
-
-
-
-  dbprintf("R = %i", R);
-  dbprintf("G = %i", G);
-  dbprintf("B = %i", B);
-  
   int hue = determine_hue(R,G,B);
   dbprintf("hue is %i \n",hue);
-
-  //TO ADD LOGIC IN LAB
-  //CHECK HUE LEVE OF RESPECTIVE COLOURS 
-  //IF RESPECTIVE COLOURS OVERLAP 
-  //CHECK individual rgb values to distinguish
   
-
+  if (is_green(hue)){
+  dbprintf("likely green");
+  } else if (is_redorange(hue)){
+  dbprintf("likely red or orange");
+  } else {
+    dbprintf("Others");
+  }
 }
+
+//void testSendColourStatus(){
+//
+//  //TO BE REBASED IN EACH ENVIRONMENT
+//  //white array and black array has to be over/underestimated 
+//  //to ensure that values do not exceed the initial ranges
+//  //(so that range of R,G,B gets accurately mapped to 0 255)
+//  int whiteArray[] = {100,70,75};
+//  int blackArray[] = {350,310,200};
+//
+//
+//  // Read Red freqency
+//  digitalWrite(S2,LOW);
+//  digitalWrite(S3,LOW);
+//
+//  R = pulseIn(OUT, LOW);
+//  dbprintf("pre mapped R = %i", R);
+//  
+//  delay(100);
+//  R = map(R, blackArray[0], whiteArray[0], 0, 255);
+//  // Read Green freqency
+//  digitalWrite(S2,HIGH);
+//  digitalWrite(S3,HIGH);
+//  G = pulseIn(OUT, LOW);  // Reading the output Green frequency
+//  dbprintf("pre mapped G = %i", G);
+//  delay(100);
+//  G = map(G, blackArray[1], whiteArray[1], 0, 255);
+//  
+//  // Setting Blue frequency, delete later
+//  digitalWrite(S2,LOW);
+//  digitalWrite(S3,HIGH);
+//  B = pulseIn(OUT, LOW);  // Reading the output Blue frequency
+//  dbprintf("Pre mapped B = %i", B);
+//  delay(100);
+//  B = map(B, blackArray[2], whiteArray[2], 0, 255);
+//
+//
+//
+//  dbprintf("R = %i", R);
+//  dbprintf("G = %i", G);
+//  dbprintf("B = %i", B);
+//  
+//  int hue = determine_hue(R,G,B);
+//  dbprintf("hue is %i \n",hue);
+//
+//  //TO ADD LOGIC IN LAB
+//  //CHECK HUE LEVE OF RESPECTIVE COLOURS 
+//  //IF RESPECTIVE COLOURS OVERLAP 
+//  //CHECK individual rgb values to distinguish
+//}
 
 void sendStatus()
 {
@@ -573,15 +584,15 @@ int pwmVal(float speed)
 
 void forward(int dist, int speed)
 {
-  dbprintf("Dist: %i \n", dist);
-  dbprintf("Speed: %i \n", speed);
+//  dbprintf("Dist: %i \n", dist);
+//  dbprintf("Speed: %i \n", speed);
   if(dist > 0) {
     deltaDist = dist;
   } else {
     deltaDist = 9999999;
   }
-  dbprintf("deltadist: %i \n", deltaDist);
-  dbprintf("forwarddist: %i \n", forwardDist);
+//  dbprintf("deltadist: %i \n", deltaDist);
+//  dbprintf("forwarddist: %i \n", forwardDist);
   newDist = forwardDist + deltaDist;
   dir = FORWARD;
   dbprintf("f ok\n");
@@ -607,8 +618,8 @@ void forward(int dist, int speed)
 // continue reversing indefinitely.
 void reverse(int dist, int speed)
 {
-  dbprintf("Dist: %i \n", dist);
-  dbprintf("Speed: %i \n", speed);
+//  dbprintf("Dist: %i \n", dist);
+//  dbprintf("Speed: %i \n", speed);
   //  //Activity 4 w8s2
   if(dist > 0) {
     deltaDist = dist;
@@ -616,10 +627,10 @@ void reverse(int dist, int speed)
     deltaDist = 9999999;
   }
   newDist = reverseDist + deltaDist;
-  dir = BACKWARD;
-  dbprintf("reverseDist: %i \n", reverseDist);
-  dbprintf("deltaDist: %i \n", deltaDist);
-  dbprintf("Newdist: %i \n", newDist);
+//  dir = BACKWARD;
+//  dbprintf("reverseDist: %i \n", reverseDist);
+//  dbprintf("deltaDist: %i \n", deltaDist);
+//  dbprintf("Newdist: %i \n", newDist);
 
   int val = pwmVal((float)speed);
 
@@ -654,9 +665,9 @@ void left(float ang, float speed)
   dir = LEFT;
   
   int val = pwmVal(speed);
-  dbprintf("ang: %i \n", (int)ang);
-  dbprintf("speed: %i \n", (int)speed);
-  dbprintf("delta: %i", (int)deltaTicks);
+//  dbprintf("ang: %i \n", (int)ang);
+//  dbprintf("speed: %i \n", (int)speed);
+//  dbprintf("delta: %i", (int)deltaTicks);
   if(ang == 0){
     deltaTicks = 9999999;
   } else {
@@ -668,7 +679,7 @@ void left(float ang, float speed)
   targetLeftTicks = leftReverseTicksTurns + deltaTicks;
   targetRightTicks = rightForwardTicksTurns + deltaTicks;
   
-  dbprintf("Tticks = %ld\n", targetTicks);
+//  dbprintf("Tticks = %ld\n", targetTicks);
 
   // For now we will ignore ang. We will fix this in Week 9.
   // We will also replace this code with bare-metal later.
@@ -835,8 +846,8 @@ void handleCommand(TPacket *command)
       break;
     case COMMAND_IDENTIFY_COLOUR:
         sendOK();
-        // sendColourStatus();
-        testSendColourStatus();
+        sendColourStatus();
+        //testSendColourStatus();
         break;
     case COMMAND_CLEAR_STATS:
         clearOneCounter(command->params[0]);
@@ -1001,7 +1012,7 @@ void loop() {
       if(cms<cmsThreshold && cms > 0){
         tooNear = true;
       }
-      if (tooNear || forwardDist > newDist){
+      if (forwardDist > newDist){
         deltaDist = 0;
         newDist = 0;
         stop();
